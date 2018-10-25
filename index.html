@@ -1,0 +1,53 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import cmath as cm
+import math
+import pandas as pd
+import ast
+from scipy.fftpack import fft
+from mpl_toolkits.mplot3d import Axes3D
+%matplotlib inline
+
+strip_data = pd.read_csv("1.csv")
+
+def main():
+    """データのパラメータ"""
+    N = 2*np.pi*1000              # サンプル数
+    dt = 1                        # サンプリング間隔
+    t = np.arange(0, N*dt, dt)    # 時間軸
+
+    """時系列データをつくる"""
+    f=0.0
+    encount_omega_1=[]            #出会い波円周波数のリスト
+    for i in range(40):
+        omega = strip_data.iloc[i][0]
+        encount_omega_1.append(omega)
+        f += strip_data.iloc[i][1]*np.cos(omega*t)+1j*strip_data.iloc[i][1]*np.sin(omega*t)
+    
+    encount_omega_2 = sorted(list(set(encount_omega_1))) #出会い波円周波数を昇順に並び替えし、重複は削除した
+     
+    
+    """フーリエ変換"""
+    F=[]
+    for i in range(len(encount_omega_2)):
+        F_w=0.0
+        for j in range(len(f)):
+            F_w += (f[j]*math.e**(-1j*encount_omega_2[i]*t[j]))    #複素数
+        F.append(F_w)
+        print("omega: "+str(encount_omega_2[i])+" ,F: "+str(np.abs(F[i])/N))
+        
+    """0,1次モーメントをつくる"""
+    m_0,m_1=0.0,0.0
+    for i in range(len(encount_omega_2)-1):
+        m_0 += np.abs(F[i]+F[i+1])/N*(encount_omega_2[i+1]-encount_omega_2[i])/2  #台形則
+        m_1 += (encount_omega_2[i+1]+encount_omega_2[i])/2*np.abs(F[i]+F[i+1])/N*(encount_omega_2[i+1]-encount_omega_2[i])/2
+    print("m_0: "+str(m_0)+" ,m_1: "+str(m_1))
+    
+    plt.plot(encount_omega_2 , np.abs(F)/N , label='|F(k)|', marker='o', linestyle='-')
+    plt.xlabel('Frequency')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plt.show()
+        
+if __name__ == "__main__":
+    main()
